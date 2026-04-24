@@ -3,6 +3,8 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, SafeAreaView, Dim
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
+const APP_VERSION = "1.0.1";
+
 // --- SRS (SM-2) Logic ---
 const calculateNextReview = (quality, prevInterval, prevEaseFactor) => {
   let interval;
@@ -10,7 +12,7 @@ const calculateNextReview = (quality, prevInterval, prevEaseFactor) => {
   easeFactor = Math.max(1.3, easeFactor);
 
   if (quality < 3) {
-    interval = 1; // Wrong, review again tomorrow
+    interval = 1;
   } else if (prevInterval === 1) {
     interval = 6;
   } else {
@@ -26,9 +28,8 @@ export default function App() {
   const [level, setLevel] = useState(null);
   const [currentWord, setCurrentWord] = useState(null);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [stats, setStats] = useState({}); // Word-specific SRS data
+  const [stats, setStats] = useState({});
 
-  // Load progress from localStorage (for web)
   useEffect(() => {
     const saved = localStorage.getItem('study_progress');
     if (saved) setStats(JSON.parse(saved));
@@ -40,17 +41,29 @@ export default function App() {
     localStorage.setItem('study_progress', JSON.stringify(newStats));
   };
 
+  const handleForceUpdate = async () => {
+    if (window.confirm("Check for updates and refresh the app?")) {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let registration of registrations) {
+            await registration.unregister();
+          }
+        }
+        window.location.reload(true);
+      } catch (error) {
+        window.location.reload();
+      }
+    }
+  };
+
   const startStudy = (selectedLevel) => {
     setLevel(selectedLevel);
     const filteredWords = wordsData.filter(w => w.cefr === selectedLevel);
-    // Logic: Pick words due today OR new words
     pickNextWord(filteredWords);
   };
 
   const pickNextWord = (pool) => {
-    const now = new Date();
-    // Simple logic: pick a random word from the level for now
-    // (In full version, prioritize 'due' words)
     const randomWord = pool[Math.floor(Math.random() * pool.length)];
     setCurrentWord(randomWord);
     setIsFlipped(false);
@@ -61,7 +74,6 @@ export default function App() {
     const nextSrs = calculateNextReview(quality, prev.interval, prev.easeFactor);
     saveProgress(currentWord.word, nextSrs);
     
-    // Pick next word
     const filteredWords = wordsData.filter(w => w.cefr === level);
     pickNextWord(filteredWords);
   };
@@ -77,6 +89,12 @@ export default function App() {
               <Text style={styles.levelText}>{l}</Text>
             </TouchableOpacity>
           ))}
+        </View>
+        <View style={styles.footer}>
+          <Text style={styles.versionText}>v{APP_VERSION}</Text>
+          <TouchableOpacity style={styles.updateBtn} onPress={handleForceUpdate}>
+            <Text style={styles.updateBtnText}>Check for Updates</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -159,5 +177,9 @@ const styles = StyleSheet.create({
   exampleText: { fontSize: 18, color: '#424245', fontStyle: 'italic', lineHeight: 26 },
   buttonRow: { flexDirection: 'row', width: '85%', justifyContent: 'space-between', marginTop: 30 },
   rateBtn: { flex: 1, marginHorizontal: 5, paddingVertical: 15, borderRadius: 15, alignItems: 'center' },
-  rateBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
+  rateBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  footer: { position: 'absolute', bottom: 40, alignItems: 'center' },
+  versionText: { color: '#86868b', fontSize: 12, marginBottom: 5 },
+  updateBtn: { padding: 10 },
+  updateBtnText: { color: '#0071e3', fontSize: 14, textDecorationLine: 'underline' }
 });
