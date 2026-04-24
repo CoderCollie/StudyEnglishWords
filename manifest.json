@@ -1,0 +1,7 @@
+{
+  "display": "standalone",
+  "lang": "en",
+  "name": "study-english-words",
+  "short_name": "study-english-words",
+  "start_url": "/?utm_source=web_app_manifest"
+}
