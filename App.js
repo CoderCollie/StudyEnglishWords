@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, SafeAreaView, Dim
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
 const REVERSE_LEVEL_MAP = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1' };
@@ -77,7 +77,6 @@ export default function App() {
   const pickNextWord = (currentStats, currentLvl) => {
     const now = new Date();
     
-    // 1. Priority: Words due for review (QUIZ MODE)
     const dueWords = wordsData.filter(w => {
       const wordStat = currentStats[w.word];
       return wordStat && new Date(wordStat.nextDate) <= now;
@@ -90,7 +89,6 @@ export default function App() {
       selected = dueWords[Math.floor(Math.random() * dueWords.length)];
       isReview = true;
     } else {
-      // 2. New words (LEARN MODE)
       const targetLevelStr = REVERSE_LEVEL_MAP[Math.floor(currentLvl)] || 'A1';
       const newWordsPool = wordsData.filter(w => w.cefr === targetLevelStr && !currentStats[w.word]);
       
@@ -109,7 +107,7 @@ export default function App() {
       setQuizOptions(generateQuizOptions(selected));
       setQuizState('playing');
     } else {
-      setQuizOptions(null); // Simple Learn Mode
+      setQuizOptions(null);
     }
   };
 
@@ -128,7 +126,7 @@ export default function App() {
   };
 
   const handleNextInLearnMode = () => {
-    processRating(4, stats, userLevel); // Automatic 'Good' for first-time learning
+    processRating(4, stats, userLevel);
   };
 
   const handleQuizAnswer = (option) => {
@@ -186,8 +184,7 @@ export default function App() {
       </View>
 
       {quizOptions ? (
-        // --- QUIZ MODE (Review) ---
-        <View style={[styles.cardContainer, { height: 550 }]}>
+        <View style={styles.cardContainer}>
           <View style={[styles.card, styles.cardFront]}>
             <Text style={styles.quizWordText}>{currentWord?.word}</Text>
             <Text style={styles.typeText}>{currentWord?.type}</Text>
@@ -220,35 +217,32 @@ export default function App() {
           </View>
         </View>
       ) : (
-        // --- LEARN MODE (New Word) ---
-        <>
-          <View style={[styles.cardContainer, { height: 500 }]}>
-            <View style={[styles.card, styles.cardBack]}>
-              <Text style={styles.wordText}>{currentWord?.word}</Text>
-              <Text style={[styles.typeText, {marginBottom: 30}]}>{currentWord?.type}</Text>
-              <ScrollView contentContainerStyle={styles.cardBackContent}>
-                <Text style={styles.definitionLabel}>Definition</Text>
-                <Text style={styles.definitionText}>{currentWord?.definition}</Text>
-                <View style={styles.divider} />
-                <Text style={styles.exampleLabel}>Example</Text>
-                <Text style={styles.exampleText}>{currentWord?.example}</Text>
-              </ScrollView>
-            </View>
+        <TouchableOpacity 
+          activeOpacity={0.9} 
+          style={styles.cardContainer} 
+          onPress={handleNextInLearnMode}
+        >
+          <View style={[styles.card, styles.cardBack]}>
+            <Text style={styles.wordText}>{currentWord?.word}</Text>
+            <Text style={[styles.typeText, {marginBottom: 30}]}>{currentWord?.type}</Text>
+            <ScrollView contentContainerStyle={styles.cardBackContent}>
+              <Text style={styles.definitionLabel}>Definition</Text>
+              <Text style={styles.definitionText}>{currentWord?.definition}</Text>
+              <View style={styles.divider} />
+              <Text style={styles.exampleLabel}>Example</Text>
+              <Text style={styles.exampleText}>{currentWord?.example}</Text>
+            </ScrollView>
+            <Text style={styles.tapToNextText}>Tap anywhere to continue</Text>
           </View>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.nextBtn} onPress={handleNextInLearnMode}>
-              <Text style={styles.nextBtnText}>Got it, Next! →</Text>
-            </TouchableOpacity>
-          </View>
-        </>
+        </TouchableOpacity>
       )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f7', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 5, color: '#1d1d1f' },
+  container: { flex: 1, backgroundColor: '#f5f5f7', alignItems: 'center' },
+  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 5, color: '#1d1d1f', marginTop: 120 },
   subtitle: { fontSize: 18, color: '#86868b', marginBottom: 40 },
   statusBox: { backgroundColor: '#fff', padding: 30, borderRadius: 25, alignItems: 'center', width: '80%', marginBottom: 40, shadowColor: '#000', shadowOffset: {width:0, height:4}, shadowOpacity: 0.05, shadowRadius: 15, elevation: 5 },
   statusLabel: { fontSize: 14, color: '#86868b', marginBottom: 10 },
@@ -256,30 +250,28 @@ const styles = StyleSheet.create({
   statusSubText: { fontSize: 12, color: '#bfbfbf', textAlign: 'center' },
   mainStartBtn: { backgroundColor: '#0071e3', paddingVertical: 20, paddingHorizontal: 60, borderRadius: 30, shadowColor: '#0071e3', shadowOffset: {width:0, height:8}, shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 },
   mainStartBtnText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  header: { width: '100%', paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', position: 'absolute', top: 60 },
+  header: { width: '100%', paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 60, marginBottom: 20 },
   backBtn: { fontSize: 18, color: '#0071e3' },
   levelIndicator: { fontSize: 14, fontWeight: '600', color: '#86868b' },
-  cardContainer: { width: Dimensions.get('window').width * 0.9, height: 450, marginTop: 40 },
+  cardContainer: { width: Dimensions.get('window').width * 0.9, flex: 0.85, marginBottom: 40 },
   card: { flex: 1, borderRadius: 30, padding: 30, shadowColor: '#000', shadowOffset: {width:0, height:10}, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
-  cardFront: { backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
+  cardFront: { backgroundColor: '#fff', alignItems: 'center' },
   cardBack: { backgroundColor: '#fff' },
-  wordText: { fontSize: 48, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
-  quizWordText: { fontSize: 42, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
-  typeText: { fontSize: 18, color: '#0071e3', marginTop: 5, fontStyle: 'italic' },
+  wordText: { fontSize: 48, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center', marginTop: 20 },
+  quizWordText: { fontSize: 42, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center', marginTop: 20 },
+  typeText: { fontSize: 18, color: '#0071e3', marginTop: 5, fontStyle: 'italic', textAlign: 'center' },
   cardBackContent: { paddingBottom: 20 },
   definitionLabel: { fontSize: 14, color: '#86868b', marginBottom: 8 },
   definitionText: { fontSize: 20, color: '#1d1d1f', lineHeight: 28, fontWeight: '500' },
   divider: { height: 1, backgroundColor: '#e5e5e5', marginVertical: 20 },
   exampleLabel: { fontSize: 14, color: '#86868b', marginBottom: 8 },
   exampleText: { fontSize: 18, color: '#424245', fontStyle: 'italic', lineHeight: 26 },
-  buttonRow: { width: '90%', marginTop: 30 },
-  nextBtn: { backgroundColor: '#1d1d1f', paddingVertical: 18, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: {width:0, height:5}, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
-  nextBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
+  tapToNextText: { textAlign: 'center', color: '#bfbfbf', fontSize: 14, marginTop: 20, fontStyle: 'italic' },
   footer: { position: 'absolute', bottom: 40, alignItems: 'center' },
   versionText: { color: '#86868b', fontSize: 12, marginBottom: 5 },
   updateBtn: { padding: 10 },
   updateBtnText: { color: '#0071e3', fontSize: 14, textDecorationLine: 'underline' },
-  optionsContainer: { width: '100%', marginTop: 10 },
+  optionsContainer: { width: '100%', marginTop: 20 },
   optionBtn: { width: '100%', backgroundColor: '#f5f5f7', padding: 15, borderRadius: 15, marginBottom: 10, borderWidth: 2, borderColor: 'transparent' },
   optionText: { fontSize: 16, color: '#1d1d1f', lineHeight: 22 },
   optionCorrect: { backgroundColor: '#e8f5e9', borderColor: '#4CAF50' },
