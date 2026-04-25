@@ -15,6 +15,8 @@ const calculateNextReview = (quality, prevInterval, prevEaseFactor) => {
 
   if (quality < 3) {
     interval = 1;
+  } else if (prevInterval === 0) {
+    interval = 1;
   } else if (prevInterval === 1) {
     interval = 6;
   } else {
