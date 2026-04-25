@@ -3,9 +3,8 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, SafeAreaView, Dim
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 
-// CEFR Level mapping for calculation
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
 const REVERSE_LEVEL_MAP = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1' };
 
@@ -29,14 +28,12 @@ const calculateNextReview = (quality, prevInterval, prevEaseFactor) => {
 
 export default function App() {
   const [isStarted, setIsStarted] = useState(false);
-  const [userLevel, setUserLevel] = useState(1.0); // Start at A1
+  const [userLevel, setUserLevel] = useState(1.0);
   const [currentWord, setCurrentWord] = useState(null);
-  const [isFlipped, setIsFlipped] = useState(false);
   const [stats, setStats] = useState({});
   
-  // Quiz specific state
-  const [quizOptions, setQuizOptions] = useState(null); // null means flashcard mode
-  const [quizState, setQuizState] = useState('playing'); // playing, correct, wrong
+  const [quizOptions, setQuizOptions] = useState(null); 
+  const [quizState, setQuizState] = useState('playing'); 
   const [selectedOption, setSelectedOption] = useState(null);
 
   useEffect(() => {
@@ -93,7 +90,7 @@ export default function App() {
       selected = dueWords[Math.floor(Math.random() * dueWords.length)];
       isReview = true;
     } else {
-      // 2. New words around current user level (FLASHCARD MODE)
+      // 2. New words (LEARN MODE)
       const targetLevelStr = REVERSE_LEVEL_MAP[Math.floor(currentLvl)] || 'A1';
       const newWordsPool = wordsData.filter(w => w.cefr === targetLevelStr && !currentStats[w.word]);
       
@@ -106,14 +103,13 @@ export default function App() {
     }
 
     setCurrentWord(selected);
-    setIsFlipped(false);
     setSelectedOption(null);
 
     if (isReview) {
       setQuizOptions(generateQuizOptions(selected));
       setQuizState('playing');
     } else {
-      setQuizOptions(null);
+      setQuizOptions(null); // Simple Learn Mode
     }
   };
 
@@ -131,8 +127,8 @@ export default function App() {
     pickNextWord(newStats, newLevel);
   };
 
-  const handleFlashcardRating = (quality) => {
-    processRating(quality, stats, userLevel);
+  const handleNextInLearnMode = () => {
+    processRating(4, stats, userLevel); // Automatic 'Good' for first-time learning
   };
 
   const handleQuizAnswer = (option) => {
@@ -157,11 +153,11 @@ export default function App() {
     return (
       <SafeAreaView style={styles.container}>
         <Text style={styles.title}>English Study</Text>
-        <Text style={styles.subtitle}>Hybrid Learning System</Text>
+        <Text style={styles.subtitle}>Zero-Decision Learning</Text>
         <View style={styles.statusBox}>
           <Text style={styles.statusLabel}>Your Level</Text>
           <Text style={styles.statusValue}>{currentLevelLabel}</Text>
-          <Text style={styles.statusSubText}>New: Flashcard / Reviews: Quiz</Text>
+          <Text style={styles.statusSubText}>Next words are selected automatically</Text>
         </View>
         <TouchableOpacity style={styles.mainStartBtn} onPress={() => {
           setIsStarted(true);
@@ -186,10 +182,11 @@ export default function App() {
         <TouchableOpacity onPress={() => setIsStarted(false)}>
           <Text style={styles.backBtn}>← Quit</Text>
         </TouchableOpacity>
-        <Text style={styles.levelIndicator}>{currentWord?.cefr} | {quizOptions ? 'Test' : 'Learn'}</Text>
+        <Text style={styles.levelIndicator}>{currentWord?.cefr} | {quizOptions ? 'Quiz' : 'Learn'}</Text>
       </View>
 
       {quizOptions ? (
+        // --- QUIZ MODE (Review) ---
         <View style={[styles.cardContainer, { height: 550 }]}>
           <View style={[styles.card, styles.cardFront]}>
             <Text style={styles.quizWordText}>{currentWord?.word}</Text>
@@ -223,43 +220,26 @@ export default function App() {
           </View>
         </View>
       ) : (
+        // --- LEARN MODE (New Word) ---
         <>
-          <View style={styles.cardContainer}>
-            <TouchableOpacity 
-              activeOpacity={0.9} 
-              style={[styles.card, isFlipped ? styles.cardBack : styles.cardFront]} 
-              onPress={() => setIsFlipped(!isFlipped)}
-            >
-              {!isFlipped ? (
-                <View style={styles.centered}>
-                  <Text style={styles.wordText}>{currentWord?.word}</Text>
-                  <Text style={styles.typeText}>{currentWord?.type}</Text>
-                  <Text style={styles.hintText}>Tap to see meaning</Text>
-                </View>
-              ) : (
-                <ScrollView contentContainerStyle={styles.cardBackContent}>
-                  <Text style={styles.definitionLabel}>Definition</Text>
-                  <Text style={styles.definitionText}>{currentWord?.definition}</Text>
-                  <View style={styles.divider} />
-                  <Text style={styles.exampleLabel}>Example</Text>
-                  <Text style={styles.exampleText}>{currentWord?.example}</Text>
-                </ScrollView>
-              )}
+          <View style={[styles.cardContainer, { height: 500 }]}>
+            <View style={[styles.card, styles.cardBack]}>
+              <Text style={styles.wordText}>{currentWord?.word}</Text>
+              <Text style={[styles.typeText, {marginBottom: 30}]}>{currentWord?.type}</Text>
+              <ScrollView contentContainerStyle={styles.cardBackContent}>
+                <Text style={styles.definitionLabel}>Definition</Text>
+                <Text style={styles.definitionText}>{currentWord?.definition}</Text>
+                <View style={styles.divider} />
+                <Text style={styles.exampleLabel}>Example</Text>
+                <Text style={styles.exampleText}>{currentWord?.example}</Text>
+              </ScrollView>
+            </View>
+          </View>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.nextBtn} onPress={handleNextInLearnMode}>
+              <Text style={styles.nextBtnText}>Got it, Next! →</Text>
             </TouchableOpacity>
           </View>
-          {isFlipped && (
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={[styles.rateBtn, {backgroundColor: '#ff4d4d'}]} onPress={() => handleFlashcardRating(1)}>
-                <Text style={styles.rateBtnText}>Again</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.rateBtn, {backgroundColor: '#ffcc00'}]} onPress={() => handleFlashcardRating(3)}>
-                <Text style={styles.rateBtnText}>Hard</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.rateBtn, {backgroundColor: '#4CAF50'}]} onPress={() => handleFlashcardRating(5)}>
-                <Text style={styles.rateBtnText}>Easy</Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </>
       )}
     </SafeAreaView>
@@ -283,20 +263,18 @@ const styles = StyleSheet.create({
   card: { flex: 1, borderRadius: 30, padding: 30, shadowColor: '#000', shadowOffset: {width:0, height:10}, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
   cardFront: { backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
   cardBack: { backgroundColor: '#fff' },
-  centered: { alignItems: 'center' },
   wordText: { fontSize: 48, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
   quizWordText: { fontSize: 42, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
-  typeText: { fontSize: 18, color: '#0071e3', marginTop: 5, fontStyle: 'italic', marginBottom: 20 },
-  hintText: { fontSize: 14, color: '#bfbfbf', marginTop: 100 },
+  typeText: { fontSize: 18, color: '#0071e3', marginTop: 5, fontStyle: 'italic' },
   cardBackContent: { paddingBottom: 20 },
   definitionLabel: { fontSize: 14, color: '#86868b', marginBottom: 8 },
   definitionText: { fontSize: 20, color: '#1d1d1f', lineHeight: 28, fontWeight: '500' },
   divider: { height: 1, backgroundColor: '#e5e5e5', marginVertical: 20 },
   exampleLabel: { fontSize: 14, color: '#86868b', marginBottom: 8 },
   exampleText: { fontSize: 18, color: '#424245', fontStyle: 'italic', lineHeight: 26 },
-  buttonRow: { flexDirection: 'row', width: '90%', justifyContent: 'space-between', marginTop: 30 },
-  rateBtn: { flex: 1, marginHorizontal: 5, paddingVertical: 15, borderRadius: 15, alignItems: 'center' },
-  rateBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  buttonRow: { width: '90%', marginTop: 30 },
+  nextBtn: { backgroundColor: '#1d1d1f', paddingVertical: 18, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: {width:0, height:5}, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
+  nextBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
   footer: { position: 'absolute', bottom: 40, alignItems: 'center' },
   versionText: { color: '#86868b', fontSize: 12, marginBottom: 5 },
   updateBtn: { padding: 10 },
