@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Dimensions } fr
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "1.10.0";
 const SESSION_LENGTH = 10;
 
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
@@ -44,6 +44,7 @@ export default function App() {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [wordsDoneInSession, setWordsDoneInSession] = useState(0);
   const [sessionCompleted, setSessionCompleted] = useState(false);
+  const [sessionLearnedWords, setSessionLearnedWords] = useState([]); // 이번 세션에서 새로 배운 단어들
 
   const [touchStart, setTouchStart] = useState({ x: 0, y: 0, time: 0 });
 
@@ -84,8 +85,9 @@ export default function App() {
     setWordsDoneInSession(0);
     setHistory([]);
     setSessionCompleted(false);
+    setSessionLearnedWords([]);
     setIsSessionActive(true);
-    pickNextWord(stats, userLevel);
+    pickNextWord(stats, userLevel, []);
   };
 
   const generateQuizOptions = (wordObj) => {
@@ -96,7 +98,7 @@ export default function App() {
     return allOptions;
   };
 
-  const pickNextWord = (currentStats, currentLvl, isBackAction = false) => {
+  const pickNextWord = (currentStats, currentLvl, currentSessionLearned = sessionLearnedWords, isBackAction = false) => {
     if (!isBackAction && currentWord) {
       setHistory(prev => {
           const newHistory = [...prev, currentWord];
@@ -108,7 +110,8 @@ export default function App() {
     
     const dueWords = wordsData.filter(w => {
       const wordStat = currentStats[w.word];
-      return wordStat && new Date(wordStat.nextDate) <= now;
+      // 방금 배운 신규 단어는 다음 세션부터 퀴즈로 나오도록 제외
+      return wordStat && new Date(wordStat.nextDate) <= now && !currentSessionLearned.includes(w.word);
     });
 
     let selected = null;
@@ -125,7 +128,7 @@ export default function App() {
         selected = newWordsPool[Math.floor(Math.random() * newWordsPool.length)];
       } else {
         selected = wordsData[Math.floor(Math.random() * wordsData.length)];
-        isReview = !!currentStats[selected.word];
+        isReview = !!currentStats[selected.word] && !currentSessionLearned.includes(selected.word);
       }
     }
 
@@ -170,12 +173,12 @@ export default function App() {
       setSessionCompleted(true);
     } else {
       setWordsDoneInSession(newWordsDone);
-      pickNextWord(newStats, newLevel);
+      pickNextWord(newStats, newLevel, sessionLearnedWords);
     }
   };
 
   const handleNextInLearnMode = () => {
-    // 신규 단어를 확인하면 '오늘 퀴즈를 봐야 할 단어'로 즉시 등록
+    // 신규 단어를 확인하면 '오늘 퀴즈를 봐야 할 단어'로 등록하되, 이번 세션에서는 안 나오게 기록
     const newStats = { 
       ...stats, 
       [currentWord.word]: { 
@@ -185,6 +188,9 @@ export default function App() {
       } 
     };
     saveAllData(newStats, userLevel);
+    
+    const updatedSessionLearned = [...sessionLearnedWords, currentWord.word];
+    setSessionLearnedWords(updatedSessionLearned);
 
     const newWordsDone = wordsDoneInSession + 1;
     if (newWordsDone >= SESSION_LENGTH) {
@@ -192,7 +198,7 @@ export default function App() {
       setSessionCompleted(true);
     } else {
       setWordsDoneInSession(newWordsDone);
-      pickNextWord(newStats, userLevel);
+      pickNextWord(newStats, userLevel, updatedSessionLearned);
     }
   };
 
