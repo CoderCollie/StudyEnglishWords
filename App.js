@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, SafeAreaView, Dim
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
 
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
 const REVERSE_LEVEL_MAP = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1' };
@@ -27,7 +27,6 @@ const calculateNextReview = (quality, prevInterval, prevEaseFactor) => {
 };
 
 export default function App() {
-  const [isStarted, setIsStarted] = useState(false);
   const [userLevel, setUserLevel] = useState(1.0);
   const [currentWord, setCurrentWord] = useState(null);
   const [stats, setStats] = useState({});
@@ -35,12 +34,27 @@ export default function App() {
   const [quizOptions, setQuizOptions] = useState(null); 
   const [quizState, setQuizState] = useState('playing'); 
   const [selectedOption, setSelectedOption] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const savedStats = localStorage.getItem('study_progress');
     const savedLevel = localStorage.getItem('user_level');
-    if (savedStats) setStats(JSON.parse(savedStats));
-    if (savedLevel) setUserLevel(parseFloat(savedLevel));
+    
+    let initialStats = {};
+    let initialLevel = 1.0;
+
+    if (savedStats) {
+      initialStats = JSON.parse(savedStats);
+      setStats(initialStats);
+    }
+    if (savedLevel) {
+      initialLevel = parseFloat(savedLevel);
+      setUserLevel(initialLevel);
+    }
+    
+    // Pick first word immediately
+    pickNextWord(initialStats, initialLevel);
+    setIsLoading(false);
   }, []);
 
   const saveAllData = (newStats, newLevel) => {
@@ -146,41 +160,24 @@ export default function App() {
     }
   };
 
-  if (!isStarted) {
-    const currentLevelLabel = REVERSE_LEVEL_MAP[Math.floor(userLevel)];
+  if (isLoading || !currentWord) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>English Study</Text>
-        <Text style={styles.subtitle}>Zero-Decision Learning</Text>
-        <View style={styles.statusBox}>
-          <Text style={styles.statusLabel}>Your Level</Text>
-          <Text style={styles.statusValue}>{currentLevelLabel}</Text>
-          <Text style={styles.statusSubText}>Next words are selected automatically</Text>
-        </View>
-        <TouchableOpacity style={styles.mainStartBtn} onPress={() => {
-          setIsStarted(true);
-          pickNextWord(stats, userLevel);
-        }}>
-          <Text style={styles.mainStartBtnText}>Start Learning</Text>
-        </TouchableOpacity>
-        <View style={styles.footer}>
-          <Text style={styles.versionText}>v{APP_VERSION}</Text>
-          <TouchableOpacity style={styles.updateBtn} onPress={handleForceUpdate}>
-            <Text style={styles.updateBtnText}>Check for Updates</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.loadingText}>Loading...</Text>
       </SafeAreaView>
     );
   }
+
+  const currentLevelLabel = REVERSE_LEVEL_MAP[Math.floor(userLevel)] || 'A1';
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="auto" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setIsStarted(false)}>
-          <Text style={styles.backBtn}>← Quit</Text>
+        <Text style={styles.levelIndicator}>Lv: {currentLevelLabel} | {quizOptions ? 'Quiz' : 'Learn'}</Text>
+        <TouchableOpacity onPress={handleForceUpdate}>
+          <Text style={styles.versionText}>v{APP_VERSION} ↻</Text>
         </TouchableOpacity>
-        <Text style={styles.levelIndicator}>{currentWord?.cefr} | {quizOptions ? 'Quiz' : 'Learn'}</Text>
       </View>
 
       {quizOptions ? (
@@ -242,23 +239,16 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f7', alignItems: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 5, color: '#1d1d1f', marginTop: 120 },
-  subtitle: { fontSize: 18, color: '#86868b', marginBottom: 40 },
-  statusBox: { backgroundColor: '#fff', padding: 30, borderRadius: 25, alignItems: 'center', width: '80%', marginBottom: 40, shadowColor: '#000', shadowOffset: {width:0, height:4}, shadowOpacity: 0.05, shadowRadius: 15, elevation: 5 },
-  statusLabel: { fontSize: 14, color: '#86868b', marginBottom: 10 },
-  statusValue: { fontSize: 48, fontWeight: 'bold', color: '#0071e3', marginBottom: 10 },
-  statusSubText: { fontSize: 12, color: '#bfbfbf', textAlign: 'center' },
-  mainStartBtn: { backgroundColor: '#0071e3', paddingVertical: 20, paddingHorizontal: 60, borderRadius: 30, shadowColor: '#0071e3', shadowOffset: {width:0, height:8}, shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 },
-  mainStartBtnText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  header: { width: '100%', paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 60, marginBottom: 20 },
-  backBtn: { fontSize: 18, color: '#0071e3' },
-  levelIndicator: { fontSize: 14, fontWeight: '600', color: '#86868b' },
-  cardContainer: { width: Dimensions.get('window').width * 0.9, flex: 0.85, marginBottom: 40 },
+  loadingText: { fontSize: 18, color: '#86868b', marginTop: 200 },
+  header: { width: '100%', paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 60, marginBottom: 10 },
+  levelIndicator: { fontSize: 16, fontWeight: '700', color: '#1d1d1f' },
+  versionText: { color: '#0071e3', fontSize: 14, fontWeight: '600' },
+  cardContainer: { width: Dimensions.get('window').width * 0.9, flex: 0.9, marginBottom: 20 },
   card: { flex: 1, borderRadius: 30, padding: 30, shadowColor: '#000', shadowOffset: {width:0, height:10}, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
   cardFront: { backgroundColor: '#fff', alignItems: 'center' },
   cardBack: { backgroundColor: '#fff' },
   wordText: { fontSize: 48, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center', marginTop: 20 },
-  quizWordText: { fontSize: 42, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center', marginTop: 20 },
+  quizWordText: { fontSize: 42, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center', marginTop: 10 },
   typeText: { fontSize: 18, color: '#0071e3', marginTop: 5, fontStyle: 'italic', textAlign: 'center' },
   cardBackContent: { paddingBottom: 20 },
   definitionLabel: { fontSize: 14, color: '#86868b', marginBottom: 8 },
@@ -266,16 +256,12 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#e5e5e5', marginVertical: 20 },
   exampleLabel: { fontSize: 14, color: '#86868b', marginBottom: 8 },
   exampleText: { fontSize: 18, color: '#424245', fontStyle: 'italic', lineHeight: 26 },
-  tapToNextText: { textAlign: 'center', color: '#bfbfbf', fontSize: 14, marginTop: 20, fontStyle: 'italic' },
-  footer: { position: 'absolute', bottom: 40, alignItems: 'center' },
-  versionText: { color: '#86868b', fontSize: 12, marginBottom: 5 },
-  updateBtn: { padding: 10 },
-  updateBtnText: { color: '#0071e3', fontSize: 14, textDecorationLine: 'underline' },
+  tapToNextText: { textAlign: 'center', color: '#bfbfbf', fontSize: 14, marginTop: 10, fontStyle: 'italic' },
   optionsContainer: { width: '100%', marginTop: 20 },
   optionBtn: { width: '100%', backgroundColor: '#f5f5f7', padding: 15, borderRadius: 15, marginBottom: 10, borderWidth: 2, borderColor: 'transparent' },
-  optionText: { fontSize: 16, color: '#1d1d1f', lineHeight: 22 },
+  optionText: { fontSize: 15, color: '#1d1d1f', lineHeight: 21 },
   optionCorrect: { backgroundColor: '#e8f5e9', borderColor: '#4CAF50' },
-  optionTextCorrect: { color: '#2e7d32', fontWeight: '600' },
+  optionTextCorrect: { color: '#2e7d32', fontWeight: '700' },
   optionWrong: { backgroundColor: '#ffebee', borderColor: '#ff5252' },
   optionTextWrong: { color: '#c62828' }
 });
