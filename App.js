@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Dimensions } fr
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.6.0";
+const APP_VERSION = "1.7.0";
 
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
 const REVERSE_LEVEL_MAP = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1' };
@@ -218,48 +218,48 @@ export default function App() {
       <StatusBar style="auto" />
 
       {quizOptions ? (
-        <View style={styles.cardContainer}>
-          <View style={styles.card}>
-            <View style={styles.wordSection}>
-              <Text style={styles.quizWordText}>{currentWord?.word}</Text>
-              <Text style={styles.typeText}>{currentWord?.type}</Text>
-            </View>
-            <View style={styles.optionsContainer}>
-              {quizOptions.map((opt, idx) => {
-                let btnStyle = [styles.optionBtn];
-                let textStyle = [styles.optionText];
-                if (quizState !== 'playing') {
-                  if (opt === currentWord.definition) {
-                    btnStyle.push(styles.optionCorrect);
-                    textStyle.push(styles.optionTextCorrect);
-                  } else if (opt === selectedOption) {
-                    btnStyle.push(styles.optionWrong);
-                    textStyle.push(styles.optionTextWrong);
-                  }
+        <View style={styles.contentContainer}>
+          <View style={styles.wordSection}>
+            <Text style={styles.wordText}>{currentWord?.word}</Text>
+            <Text style={styles.typeText}>{currentWord?.type}</Text>
+          </View>
+          
+          <View style={styles.optionsContainer}>
+            {quizOptions.map((opt, idx) => {
+              let btnStyle = [styles.optionBtn];
+              let textStyle = [styles.optionText];
+              if (quizState !== 'playing') {
+                if (opt === currentWord.definition) {
+                  btnStyle.push(styles.optionCorrect);
+                  textStyle.push(styles.optionTextCorrect);
+                } else if (opt === selectedOption) {
+                  btnStyle.push(styles.optionWrong);
+                  textStyle.push(styles.optionTextWrong);
                 }
-                return (
-                  <TouchableOpacity 
-                    key={idx} 
-                    style={btnStyle}
-                    activeOpacity={0.7}
-                    onPress={() => handleQuizAnswer(opt)}
-                    disabled={quizState !== 'playing'}
-                  >
-                    <Text style={textStyle}>{opt}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+              }
+              return (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={btnStyle}
+                  activeOpacity={0.7}
+                  onPress={() => handleQuizAnswer(opt)}
+                  disabled={quizState !== 'playing'}
+                >
+                  <Text style={textStyle}>{opt}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       ) : (
-        <View style={styles.cardContainer}>
-          <View style={styles.card}>
-            <View style={styles.wordSection}>
-              <Text style={styles.wordText}>{currentWord?.word}</Text>
-              <Text style={styles.typeText}>{currentWord?.type}</Text>
-            </View>
-            <View style={styles.definitionSection}>
+        <View style={styles.contentContainer}>
+          <View style={styles.wordSection}>
+            <Text style={styles.wordText}>{currentWord?.word}</Text>
+            <Text style={styles.typeText}>{currentWord?.type}</Text>
+          </View>
+
+          <View style={styles.definitionSection}>
+            <View style={styles.definitionCard}>
               <Text style={styles.definitionLabel}>Definition</Text>
               <Text style={styles.definitionText}>{currentWord?.definition}</Text>
               <View style={styles.divider} />
@@ -280,25 +280,65 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f7' },
   loadingText: { fontSize: 18, color: '#86868b', marginTop: 200, alignSelf: 'center' },
-  cardContainer: { flex: 1, padding: 20, paddingTop: 40, paddingBottom: 40 },
-  card: { flex: 1, backgroundColor: '#fff', borderRadius: 30, padding: 25, shadowColor: '#000', shadowOffset: {width:0, height:10}, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10, justifyContent: 'space-evenly' },
-  wordSection: { alignItems: 'center' },
-  wordText: { fontSize: 44, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
-  quizWordText: { fontSize: 38, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
-  typeText: { fontSize: 18, color: '#0071e3', fontStyle: 'italic', textAlign: 'center', marginTop: 5 },
-  definitionSection: { justifyContent: 'center' },
-  definitionLabel: { fontSize: 13, color: '#86868b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  
+  contentContainer: { 
+    flex: 1, 
+    paddingHorizontal: 20, 
+    paddingTop: 60, 
+    paddingBottom: 40,
+    justifyContent: 'space-around'
+  },
+  
+  wordSection: { 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginBottom: 20
+  },
+  wordText: { fontSize: 48, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
+  typeText: { fontSize: 18, color: '#0071e3', fontStyle: 'italic', textAlign: 'center', marginTop: 8 },
+  
+  definitionSection: {
+    flex: 1,
+    justifyContent: 'center'
+  },
+  definitionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 30,
+    shadowColor: '#000',
+    shadowOffset: {width:0, height:8},
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 5
+  },
+  definitionLabel: { fontSize: 13, color: '#86868b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
   definitionText: { fontSize: 22, color: '#1d1d1f', lineHeight: 30, fontWeight: '500' },
   divider: { height: 1, backgroundColor: '#e5e5e5', marginVertical: 25 },
-  exampleLabel: { fontSize: 13, color: '#86868b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  exampleLabel: { fontSize: 13, color: '#86868b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
   exampleText: { fontSize: 18, color: '#424245', fontStyle: 'italic', lineHeight: 26 },
-  optionsContainer: { justifyContent: 'center', marginTop: 10 },
-  optionBtn: { backgroundColor: '#f5f5f7', padding: 18, borderRadius: 15, marginBottom: 12, borderWidth: 2, borderColor: 'transparent' },
+  
+  optionsContainer: { 
+    justifyContent: 'center',
+  },
+  optionBtn: { 
+    backgroundColor: '#fff', 
+    padding: 20, 
+    borderRadius: 20, 
+    marginBottom: 15, 
+    borderWidth: 2, 
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: {width:0, height:4},
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3
+  },
   optionText: { fontSize: 16, color: '#1d1d1f', lineHeight: 22 },
   optionCorrect: { backgroundColor: '#e8f5e9', borderColor: '#4CAF50' },
   optionTextCorrect: { color: '#2e7d32', fontWeight: '700' },
   optionWrong: { backgroundColor: '#ffebee', borderColor: '#ff5252' },
   optionTextWrong: { color: '#c62828' },
+  
   versionBtn: { position: 'absolute', bottom: 10, right: 15, padding: 10 },
   versionText: { color: '#bfbfbf', fontSize: 10 }
 });
