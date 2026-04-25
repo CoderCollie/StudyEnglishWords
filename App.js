@@ -3,9 +3,12 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, SafeAreaView, Dim
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.0.1";
+const APP_VERSION = "1.1.0";
 
-// --- SRS (SM-2) Logic ---
+// CEFR Level mapping for calculation
+const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
+const REVERSE_LEVEL_MAP = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1' };
+
 const calculateNextReview = (quality, prevInterval, prevEaseFactor) => {
   let interval;
   let easeFactor = prevEaseFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
@@ -25,20 +28,24 @@ const calculateNextReview = (quality, prevInterval, prevEaseFactor) => {
 };
 
 export default function App() {
-  const [level, setLevel] = useState(null);
+  const [isStarted, setIsStarted] = useState(false);
+  const [userLevel, setUserLevel] = useState(1.0); // Start at A1 (1.0)
   const [currentWord, setCurrentWord] = useState(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const [stats, setStats] = useState({});
 
   useEffect(() => {
-    const saved = localStorage.getItem('study_progress');
-    if (saved) setStats(JSON.parse(saved));
+    const savedStats = localStorage.getItem('study_progress');
+    const savedLevel = localStorage.getItem('user_level');
+    if (savedStats) setStats(JSON.parse(savedStats));
+    if (savedLevel) setUserLevel(parseFloat(savedLevel));
   }, []);
 
-  const saveProgress = (word, srsData) => {
-    const newStats = { ...stats, [word]: srsData };
+  const saveAllData = (newStats, newLevel) => {
     setStats(newStats);
+    setUserLevel(newLevel);
     localStorage.setItem('study_progress', JSON.stringify(newStats));
+    localStorage.setItem('user_level', newLevel.toString());
   };
 
   const handleForceUpdate = async () => {
@@ -57,39 +64,70 @@ export default function App() {
     }
   };
 
-  const startStudy = (selectedLevel) => {
-    setLevel(selectedLevel);
-    const filteredWords = wordsData.filter(w => w.cefr === selectedLevel);
-    pickNextWord(filteredWords);
-  };
+  const pickNextWord = (currentStats, currentLvl) => {
+    const now = new Date();
+    
+    // 1. Priority: Words due for review
+    const dueWords = wordsData.filter(w => {
+      const wordStat = currentStats[w.word];
+      return wordStat && new Date(wordStat.nextDate) <= now;
+    });
 
-  const pickNextWord = (pool) => {
-    const randomWord = pool[Math.floor(Math.random() * pool.length)];
-    setCurrentWord(randomWord);
+    if (dueWords.length > 0) {
+      setCurrentWord(dueWords[Math.floor(Math.random() * dueWords.length)]);
+    } else {
+      // 2. New words around current user level
+      const targetLevelStr = REVERSE_LEVEL_MAP[Math.floor(currentLvl)] || 'A1';
+      const newWordsPool = wordsData.filter(w => w.cefr === targetLevelStr && !currentStats[w.word]);
+      
+      if (newWordsPool.length > 0) {
+        setCurrentWord(newWordsPool[Math.floor(Math.random() * newWordsPool.length)]);
+      } else {
+        // Fallback: If no new words in current level, try next level or just any random word
+        const fallbackWord = wordsData[Math.floor(Math.random() * wordsData.length)];
+        setCurrentWord(fallbackWord);
+      }
+    }
     setIsFlipped(false);
   };
 
   const handleRating = (quality) => {
     const prev = stats[currentWord.word] || { interval: 0, easeFactor: 2.5 };
     const nextSrs = calculateNextReview(quality, prev.interval, prev.easeFactor);
-    saveProgress(currentWord.word, nextSrs);
     
-    const filteredWords = wordsData.filter(w => w.cefr === level);
-    pickNextWord(filteredWords);
+    const newStats = { ...stats, [currentWord.word]: nextSrs };
+    
+    // Adjust user level based on performance
+    let levelAdjustment = 0;
+    if (quality === 5) levelAdjustment = 0.05; // Easy: level up
+    if (quality === 1) levelAdjustment = -0.1; // Again: level down slightly
+    
+    const newLevel = Math.min(5.9, Math.max(1.0, userLevel + levelAdjustment));
+    
+    saveAllData(newStats, newLevel);
+    pickNextWord(newStats, newLevel);
   };
 
-  if (!level) {
+  if (!isStarted) {
+    const currentLevelLabel = REVERSE_LEVEL_MAP[Math.floor(userLevel)];
     return (
       <SafeAreaView style={styles.container}>
         <Text style={styles.title}>English Study</Text>
-        <Text style={styles.subtitle}>Select Level</Text>
-        <View style={styles.levelGrid}>
-          {['A1', 'A2', 'B1', 'B2', 'C1'].map(l => (
-            <TouchableOpacity key={l} style={styles.levelButton} onPress={() => startStudy(l)}>
-              <Text style={styles.levelText}>{l}</Text>
-            </TouchableOpacity>
-          ))}
+        <Text style={styles.subtitle}>Adaptive Flashcards</Text>
+        
+        <View style={styles.statusBox}>
+          <Text style={styles.statusLabel}>Your Current Level</Text>
+          <Text style={styles.statusValue}>{currentLevelLabel}</Text>
+          <Text style={styles.statusSubText}>Next words will be based on your progress</Text>
         </View>
+
+        <TouchableOpacity style={styles.mainStartBtn} onPress={() => {
+          setIsStarted(true);
+          pickNextWord(stats, userLevel);
+        }}>
+          <Text style={styles.mainStartBtnText}>Start Learning</Text>
+        </TouchableOpacity>
+
         <View style={styles.footer}>
           <Text style={styles.versionText}>v{APP_VERSION}</Text>
           <TouchableOpacity style={styles.updateBtn} onPress={handleForceUpdate}>
@@ -104,10 +142,10 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="auto" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setLevel(null)}>
-          <Text style={styles.backBtn}>← Back</Text>
+        <TouchableOpacity onPress={() => setIsStarted(false)}>
+          <Text style={styles.backBtn}>← Quit</Text>
         </TouchableOpacity>
-        <Text style={styles.levelIndicator}>{level} Level</Text>
+        <Text style={styles.levelIndicator}>Current Focus: {currentWord?.cefr}</Text>
       </View>
 
       <View style={styles.cardContainer}>
@@ -153,14 +191,17 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f7', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 10, color: '#1d1d1f' },
-  subtitle: { fontSize: 18, color: '#86868b', marginBottom: 30 },
-  levelGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 15 },
-  levelButton: { width: 80, height: 80, backgroundColor: '#fff', borderRadius: 20, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: {width:0, height:2}, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
-  levelText: { fontSize: 24, fontWeight: '600', color: '#0071e3' },
+  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 5, color: '#1d1d1f' },
+  subtitle: { fontSize: 18, color: '#86868b', marginBottom: 40 },
+  statusBox: { backgroundColor: '#fff', padding: 30, borderRadius: 25, alignItems: 'center', width: '80%', marginBottom: 40, shadowColor: '#000', shadowOffset: {width:0, height:4}, shadowOpacity: 0.05, shadowRadius: 15, elevation: 5 },
+  statusLabel: { fontSize: 14, color: '#86868b', marginBottom: 10 },
+  statusValue: { fontSize: 48, fontWeight: 'bold', color: '#0071e3', marginBottom: 10 },
+  statusSubText: { fontSize: 12, color: '#bfbfbf', textAlign: 'center' },
+  mainStartBtn: { backgroundColor: '#0071e3', paddingVertical: 20, paddingHorizontal: 60, borderRadius: 30, shadowColor: '#0071e3', shadowOffset: {width:0, height:8}, shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 },
+  mainStartBtnText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
   header: { width: '100%', paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', position: 'absolute', top: 60 },
   backBtn: { fontSize: 18, color: '#0071e3' },
-  levelIndicator: { fontSize: 18, fontWeight: 'bold', color: '#1d1d1f' },
+  levelIndicator: { fontSize: 16, fontWeight: '600', color: '#86868b' },
   cardContainer: { width: Dimensions.get('window').width * 0.85, height: 450, marginTop: 40 },
   card: { flex: 1, borderRadius: 30, padding: 30, shadowColor: '#000', shadowOffset: {width:0, height:10}, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
   cardFront: { backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
