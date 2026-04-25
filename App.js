@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Dimensions } fr
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.10.0";
+const APP_VERSION = "1.11.0";
 const SESSION_LENGTH = 10;
 
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
@@ -239,12 +239,12 @@ export default function App() {
       setQuizState('correct');
       setTimeout(() => {
         processRating(4, stats, userLevel);
-      }, 1000);
+      }, 300);
     } else {
       setQuizState('wrong');
       setTimeout(() => {
         processRating(1, stats, userLevel);
-      }, 2500);
+      }, 600);
     }
   };
 
