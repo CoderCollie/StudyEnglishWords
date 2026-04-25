@@ -3,7 +3,8 @@ import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Dimensions } fr
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.7.0";
+const APP_VERSION = "1.8.0";
+const SESSION_LENGTH = 10;
 
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
 const REVERSE_LEVEL_MAP = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1' };
@@ -39,25 +40,20 @@ export default function App() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Session State
+  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [wordsDoneInSession, setWordsDoneInSession] = useState(0);
+  const [sessionCompleted, setSessionCompleted] = useState(false);
+
   const [touchStart, setTouchStart] = useState({ x: 0, y: 0, time: 0 });
 
   useEffect(() => {
     const savedStats = localStorage.getItem('study_progress');
     const savedLevel = localStorage.getItem('user_level');
     
-    let initialStats = {};
-    let initialLevel = 1.0;
-
-    if (savedStats) {
-      initialStats = JSON.parse(savedStats);
-      setStats(initialStats);
-    }
-    if (savedLevel) {
-      initialLevel = parseFloat(savedLevel);
-      setUserLevel(initialLevel);
-    }
+    if (savedStats) setStats(JSON.parse(savedStats));
+    if (savedLevel) setUserLevel(parseFloat(savedLevel));
     
-    pickNextWord(initialStats, initialLevel);
     setIsLoading(false);
   }, []);
 
@@ -82,6 +78,14 @@ export default function App() {
         window.location.reload();
       }
     }
+  };
+
+  const startSession = () => {
+    setWordsDoneInSession(0);
+    setHistory([]);
+    setSessionCompleted(false);
+    setIsSessionActive(true);
+    pickNextWord(stats, userLevel);
   };
 
   const generateQuizOptions = (wordObj) => {
@@ -144,6 +148,7 @@ export default function App() {
       setQuizOptions(null); 
       setSelectedOption(null);
       setQuizState('playing');
+      setWordsDoneInSession(prev => Math.max(0, prev - 1));
     }
   };
 
@@ -158,7 +163,15 @@ export default function App() {
     
     const newLevel = Math.min(5.9, Math.max(1.0, currentLvl + levelAdjustment));
     saveAllData(newStats, newLevel);
-    pickNextWord(newStats, newLevel);
+
+    const newWordsDone = wordsDoneInSession + 1;
+    if (newWordsDone >= SESSION_LENGTH) {
+      setIsSessionActive(false);
+      setSessionCompleted(true);
+    } else {
+      setWordsDoneInSession(newWordsDone);
+      pickNextWord(newStats, newLevel);
+    }
   };
 
   const handleTouchStart = (e) => {
@@ -170,7 +183,7 @@ export default function App() {
   };
 
   const handleTouchEnd = (e) => {
-    if (!touchStart.time) return;
+    if (!touchStart.time || !isSessionActive) return;
     
     const touchEndX = e.nativeEvent.pageX;
     const touchEndY = e.nativeEvent.pageY;
@@ -191,7 +204,7 @@ export default function App() {
   };
 
   const handleQuizAnswer = (option) => {
-    if (quizState !== 'playing') return;
+    if (quizState !== 'playing' || !isSessionActive) return;
     setSelectedOption(option);
     
     if (option === currentWord.definition) {
@@ -207,7 +220,7 @@ export default function App() {
     }
   };
 
-  if (isLoading || !currentWord) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <Text style={styles.loadingText}>Loading...</Text>
@@ -215,14 +228,48 @@ export default function App() {
     );
   }
 
+  if (!isSessionActive) {
+    const currentLevelLabel = REVERSE_LEVEL_MAP[Math.floor(userLevel)] || 'A1';
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="auto" />
+        <View style={styles.contentContainer}>
+          <View style={styles.wordSection}>
+            <Text style={styles.wordText}>
+              {sessionCompleted ? "Session Complete! 🎉" : "Ready to Study?"}
+            </Text>
+            <Text style={[styles.typeText, { marginTop: 15 }]}>
+              {sessionCompleted ? `Great job! You've learned ${SESSION_LENGTH} words.` : `Current Level: ${currentLevelLabel}`}
+            </Text>
+          </View>
+          
+          <View style={styles.optionsContainer}>
+             <TouchableOpacity style={styles.startBtn} onPress={startSession} activeOpacity={0.8}>
+                <Text style={styles.startBtnText}>
+                  {sessionCompleted ? "Start Another Session" : "Start Session"}
+                </Text>
+             </TouchableOpacity>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.versionBtn} onPress={handleForceUpdate}>
+          <Text style={styles.versionText}>v{APP_VERSION}</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <StatusBar style="auto" />
+      
+      <View style={styles.progressContainer}>
+        <Text style={styles.progressText}>{wordsDoneInSession + 1} / {SESSION_LENGTH}</Text>
+      </View>
 
       {quizOptions ? (
         <View style={styles.contentContainer}>
           <View style={styles.wordSection}>
-            <Text style={styles.wordText}>{currentWord?.word}</Text>
+            <Text style={styles.quizWordText}>{currentWord?.word}</Text>
             <Text style={styles.typeText}>{currentWord?.type}</Text>
           </View>
           
@@ -283,10 +330,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f7' },
   loadingText: { fontSize: 18, color: '#86868b', marginTop: 200, alignSelf: 'center' },
   
+  progressContainer: { position: 'absolute', top: 50, right: 20, zIndex: 10 },
+  progressText: { color: '#86868b', fontSize: 14, fontWeight: 'bold' },
+
   contentContainer: { 
     flex: 1, 
     paddingHorizontal: 20, 
-    paddingTop: 60, 
+    paddingTop: 80, 
     paddingBottom: 40,
     justifyContent: 'space-around'
   },
@@ -341,6 +391,9 @@ const styles = StyleSheet.create({
   optionWrong: { backgroundColor: '#ffebee', borderColor: '#ff5252' },
   optionTextWrong: { color: '#c62828' },
   
+  startBtn: { backgroundColor: '#1d1d1f', paddingVertical: 22, borderRadius: 24, alignItems: 'center', shadowColor: '#000', shadowOffset: {width:0, height:8}, shadowOpacity: 0.15, shadowRadius: 15, elevation: 8, marginTop: 40 },
+  startBtnText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+
   versionBtn: { position: 'absolute', bottom: 10, right: 15, padding: 10 },
   versionText: { color: '#bfbfbf', fontSize: 10 }
 });
