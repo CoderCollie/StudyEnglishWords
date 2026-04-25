@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Dimensions } fr
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.8.0";
+const APP_VERSION = "1.9.0";
 const SESSION_LENGTH = 10;
 
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
@@ -15,9 +15,9 @@ const calculateNextReview = (quality, prevInterval, prevEaseFactor) => {
   easeFactor = Math.max(1.3, easeFactor);
 
   if (quality < 3) {
-    interval = 1;
+    interval = 0; // 틀리면 오늘 다시 퀴즈
   } else if (prevInterval === 0) {
-    interval = 1;
+    interval = 1; // 처음 퀴즈 맞히면 내일 복습
   } else if (prevInterval === 1) {
     interval = 6;
   } else {
@@ -174,6 +174,28 @@ export default function App() {
     }
   };
 
+  const handleNextInLearnMode = () => {
+    // 신규 단어를 확인하면 '오늘 퀴즈를 봐야 할 단어'로 즉시 등록
+    const newStats = { 
+      ...stats, 
+      [currentWord.word]: { 
+        interval: 0, 
+        easeFactor: 2.5, 
+        nextDate: new Date().toISOString() 
+      } 
+    };
+    saveAllData(newStats, userLevel);
+
+    const newWordsDone = wordsDoneInSession + 1;
+    if (newWordsDone >= SESSION_LENGTH) {
+      setIsSessionActive(false);
+      setSessionCompleted(true);
+    } else {
+      setWordsDoneInSession(newWordsDone);
+      pickNextWord(newStats, userLevel);
+    }
+  };
+
   const handleTouchStart = (e) => {
     setTouchStart({ 
       x: e.nativeEvent.pageX, 
@@ -196,7 +218,7 @@ export default function App() {
     } 
     else if (Math.abs(distanceX) < 10 && distanceY < 10 && timeDiff < 500) {
       if (!quizOptions) {
-        processRating(4, stats, userLevel);
+        handleNextInLearnMode();
       }
     }
     
@@ -269,7 +291,7 @@ export default function App() {
       {quizOptions ? (
         <View style={styles.contentContainer}>
           <View style={styles.wordSection}>
-            <Text style={styles.quizWordText}>{currentWord?.word}</Text>
+            <Text style={styles.wordText}>{currentWord?.word}</Text>
             <Text style={styles.typeText}>{currentWord?.type}</Text>
           </View>
           
