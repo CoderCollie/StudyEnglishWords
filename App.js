@@ -94,7 +94,7 @@ export default function App() {
     if (!isBackAction && currentWord) {
       setHistory(prev => {
           const newHistory = [...prev, currentWord];
-          return newHistory.slice(-20); // Keep only last 20 words
+          return newHistory.slice(-20);
       });
     }
 
@@ -139,7 +139,7 @@ export default function App() {
       const prevWord = history[history.length - 1];
       setHistory(h => h.slice(0, -1));
       setCurrentWord(prevWord);
-      setQuizOptions(null); // Force Learn Mode to review definition
+      setQuizOptions(null); 
       setSelectedOption(null);
       setQuizState('playing');
     }
@@ -176,11 +176,9 @@ export default function App() {
     const distanceY = Math.abs(touchEndY - touchStart.y);
     const timeDiff = Date.now() - touchStart.time;
 
-    // Check for swipe right (Back)
     if (distanceX > 60 && distanceY < 60 && timeDiff < 500) {
       handleGoBack();
     } 
-    // Check for tap (only in Learn Mode to go next)
     else if (Math.abs(distanceX) < 10 && distanceY < 10 && timeDiff < 500) {
       if (!quizOptions) {
         processRating(4, stats, userLevel);
@@ -251,7 +249,7 @@ export default function App() {
                   </TouchableOpacity>
                 );
               })}
-            </ScrollView>
+            </View>
           </View>
         </View>
       ) : (
@@ -282,22 +280,18 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f7' },
   loadingText: { fontSize: 18, color: '#86868b', marginTop: 200, alignSelf: 'center' },
-  
   cardContainer: { flex: 1, padding: 20, paddingTop: 40, paddingBottom: 40 },
   card: { flex: 1, backgroundColor: '#fff', borderRadius: 30, padding: 25, shadowColor: '#000', shadowOffset: {width:0, height:10}, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10, justifyContent: 'space-evenly' },
-  
   wordSection: { alignItems: 'center' },
   wordText: { fontSize: 44, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
   quizWordText: { fontSize: 38, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
   typeText: { fontSize: 18, color: '#0071e3', fontStyle: 'italic', textAlign: 'center', marginTop: 5 },
-  
   definitionSection: { justifyContent: 'center' },
   definitionLabel: { fontSize: 13, color: '#86868b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
   definitionText: { fontSize: 22, color: '#1d1d1f', lineHeight: 30, fontWeight: '500' },
   divider: { height: 1, backgroundColor: '#e5e5e5', marginVertical: 25 },
   exampleLabel: { fontSize: 13, color: '#86868b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
   exampleText: { fontSize: 18, color: '#424245', fontStyle: 'italic', lineHeight: 26 },
-  
   optionsContainer: { justifyContent: 'center', marginTop: 10 },
   optionBtn: { backgroundColor: '#f5f5f7', padding: 18, borderRadius: 15, marginBottom: 12, borderWidth: 2, borderColor: 'transparent' },
   optionText: { fontSize: 16, color: '#1d1d1f', lineHeight: 22 },
@@ -305,7 +299,6 @@ const styles = StyleSheet.create({
   optionTextCorrect: { color: '#2e7d32', fontWeight: '700' },
   optionWrong: { backgroundColor: '#ffebee', borderColor: '#ff5252' },
   optionTextWrong: { color: '#c62828' },
-  
   versionBtn: { position: 'absolute', bottom: 10, right: 15, padding: 10 },
   versionText: { color: '#bfbfbf', fontSize: 10 }
 });
