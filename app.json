@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "English Words",
+    "slug": "study-english-words",
+    "version": "1.14.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.codercollie.studyenglishwords"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.codercollie.studyenglishwords"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "baseUrl": "/StudyEnglishWords",
+      "config": {
+        "pwa": {
+          "manifest": {
+            "name": "English Study",
+            "short_name": "EngStudy",
+            "start_url": "/StudyEnglishWords/",
+            "display": "standalone",
+            "background_color": "#f5f5f7",
+            "theme_color": "#1d1d1f"
+          }
+        }
+      }
+    }
+  }
+}
