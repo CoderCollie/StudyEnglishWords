@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "English Words",
+    "name": "EngWord Pro",
     "slug": "study-english-words",
-    "version": "1.14.0",
+    "version": "1.14.4",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
@@ -13,9 +13,9 @@
       "config": {
         "pwa": {
           "manifest": {
-            "name": "English Study",
-            "short_name": "EngStudy",
-            "start_url": "/StudyEnglishWords/",
+            "name": "EngWord Pro",
+            "short_name": "EngWord",
+            "start_url": "/StudyEnglishWords/?v=1.14.4",
             "scope": "/StudyEnglishWords/",
             "display": "standalone",
             "background_color": "#f5f5f7",
