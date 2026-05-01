@@ -1,8 +1,8 @@
 {
   "display": "standalone",
   "lang": "en",
-  "name": "English Words",
-  "short_name": "English Words",
+  "name": "EngWord Pro",
+  "short_name": "EngWord Pro",
   "start_url": "/?utm_source=web_app_manifest",
   "orientation": "portrait"
 }
