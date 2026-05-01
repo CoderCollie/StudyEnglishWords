@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Dimensions } fr
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.14.1";
+const APP_VERSION = "1.14.2";
 const SESSION_LENGTH = 10;
 
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
@@ -161,12 +161,21 @@ export default function App() {
   };
 
   const handleForceUpdate = async () => {
-    if (window.confirm("Check for updates and refresh the app?")) {
+    if (window.confirm("Delete all caches and refresh to latest version?")) {
       try {
+        // 1. Unregister all service workers
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
-          for (let registration of registrations) await registration.unregister();
+          for (let registration of registrations) {
+            await registration.unregister();
+          }
         }
+        // 2. Clear all Cache Storage
+        if ('caches' in window) {
+           const cacheNames = await caches.keys();
+           await Promise.all(cacheNames.map(name => caches.delete(name)));
+        }
+        // 3. Force reload ignoring browser cache
         window.location.reload(true);
       } catch (error) {
         window.location.reload();
