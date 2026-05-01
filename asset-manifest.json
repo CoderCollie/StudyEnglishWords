@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.js": "/StudyEnglishWords/static/js/main.e4ffca6d.js",
-    "static/js/863.a4cccd7f.js": "/StudyEnglishWords/static/js/863.a4cccd7f.js",
+    "main.js": "/StudyEnglishWords/static/js/main.5cb25c5a.js",
+    "static/js/863.4f424778.js": "/StudyEnglishWords/static/js/863.4f424778.js",
     "index.html": "/StudyEnglishWords/index.html",
     "serve.json": "/StudyEnglishWords/serve.json",
     "manifest.json": "/StudyEnglishWords/manifest.json",
-    "main.e4ffca6d.js.map": "/StudyEnglishWords/static/js/main.e4ffca6d.js.map",
-    "863.a4cccd7f.js.map": "/StudyEnglishWords/static/js/863.a4cccd7f.js.map"
+    "main.5cb25c5a.js.map": "/StudyEnglishWords/static/js/main.5cb25c5a.js.map",
+    "863.4f424778.js.map": "/StudyEnglishWords/static/js/863.4f424778.js.map"
   },
   "entrypoints": [
-    "static/js/863.a4cccd7f.js",
-    "static/js/main.e4ffca6d.js"
+    "static/js/863.4f424778.js",
+    "static/js/main.5cb25c5a.js"
   ]
 }
