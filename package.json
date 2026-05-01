@@ -1,7 +1,7 @@
 {
   "name": "study-english-words",
-  "version": "1.0.0",
-  "homepage": ".",
+  "version": "1.14.1",
+  "homepage": "https://CoderCollie.github.io/StudyEnglishWords/",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
