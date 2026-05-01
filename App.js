@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Dimensions } fr
 import { StatusBar } from 'expo-status-bar';
 import wordsData from './data.json';
 
-const APP_VERSION = "1.13.0";
+const APP_VERSION = "1.14.0";
 const SESSION_LENGTH = 10;
 
 const LEVEL_MAP = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5 };
@@ -70,7 +70,7 @@ export default function App() {
   const loadAllData = () => {
     const savedStats = localStorage.getItem('study_progress');
     const savedLevel = localStorage.getItem('user_level');
-    const savedHistory = localStorage.getItem('study_history'); // { 'YYYY-MM-DD': 15 }
+    const savedHistory = localStorage.getItem('study_history');
     const savedStreak = localStorage.getItem('streak_data');
     
     let initialStats = {};
@@ -85,7 +85,6 @@ export default function App() {
       setUserLevel(initialLevel);
     }
 
-    // Five Day History Logic
     const historyData = savedHistory ? JSON.parse(savedHistory) : {};
     const recentDates = getRecentDates(5);
     const historyArray = recentDates.map(date => ({
@@ -95,7 +94,6 @@ export default function App() {
     }));
     setFiveDayHistory(historyArray);
 
-    // Streak Logic
     const today = new Date().toISOString().split('T')[0];
     if (savedStreak) {
       const streakData = JSON.parse(savedStreak);
@@ -110,7 +108,6 @@ export default function App() {
       }
     }
 
-    // Mastery Bar
     const currentLvlStr = REVERSE_LEVEL_MAP[Math.floor(initialLevel)] || 'A1';
     const wordsInCurrentLevel = wordsData.filter(w => w.cefr === currentLvlStr);
     const learnedInCurrentLevel = wordsInCurrentLevel.filter(w => initialStats[w.word]);
@@ -122,19 +119,16 @@ export default function App() {
   const updateHistoryAndStreak = () => {
     const today = new Date().toISOString().split('T')[0];
     
-    // Update Study History (Count +1)
     const savedHistory = localStorage.getItem('study_history');
     const historyData = savedHistory ? JSON.parse(savedHistory) : {};
     const newTodayCount = (historyData[today] || 0) + 1;
     const newHistoryData = { ...historyData, [today]: newTodayCount };
     localStorage.setItem('study_history', JSON.stringify(newHistoryData));
 
-    // Update 5-day state for UI
     setFiveDayHistory(prev => prev.map(item => 
       item.date === today ? { ...item, count: newTodayCount } : item
     ));
 
-    // Update Streak
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -333,7 +327,6 @@ export default function App() {
              </View>
           </View>
 
-          {/* 5-Day History Graph */}
           <View style={styles.graphCard}>
             <Text style={styles.graphTitle}>Weekly Progress</Text>
             <View style={styles.barContainer}>
@@ -351,7 +344,7 @@ export default function App() {
 
           <View style={styles.masterySection}>
             <View style={styles.masteryHeader}>
-              <Text style={styles.masteryTitle}>{currentLevelLabel} 정복도</Text>
+              <Text style={styles.masteryTitle}>{currentLevelLabel} Mastery</Text>
               <Text style={styles.masteryPercent}>{masteryPercent}%</Text>
             </View>
             <View style={styles.progressBarBg}>
@@ -379,50 +372,55 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <StatusBar style="auto" />
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressText}>{wordsDoneInSession + 1} / {SESSION_LENGTH}</Text>
+      <View style={styles.sessionHeader}>
+        <TouchableOpacity onPress={() => setIsSessionActive(false)} style={styles.quitBtn}>
+          <Text style={styles.quitBtnText}>✕ Quit</Text>
+        </TouchableOpacity>
+        <View style={styles.progressBadge}>
+          <Text style={styles.progressText}>{wordsDoneInSession + 1} / {SESSION_LENGTH}</Text>
+        </View>
       </View>
 
-      {quizOptions ? (
-        <View style={styles.contentContainer}>
-          <View style={styles.wordSection}>
-            <Text style={styles.wordText}>{currentWord?.word}</Text>
-            <Text style={styles.typeText}>{currentWord?.type}</Text>
+      <View style={styles.studyCardContainer}>
+        <View style={styles.mainCard}>
+          <View style={styles.cardWordSection}>
+            <Text style={styles.cardWordText}>{currentWord?.word}</Text>
+            <Text style={styles.cardTypeText}>{currentWord?.type}</Text>
           </View>
-          <View style={styles.optionsContainer}>
-            {quizOptions.map((opt, idx) => {
-              let btnStyle = [styles.optionBtn];
-              let textStyle = [styles.optionText];
-              if (quizState !== 'playing') {
-                if (opt === currentWord.definition) { btnStyle.push(styles.optionCorrect); textStyle.push(styles.optionTextCorrect); }
-                else if (opt === selectedOption) { btnStyle.push(styles.optionWrong); textStyle.push(styles.optionTextWrong); }
-              }
-              return (
-                <TouchableOpacity key={idx} style={btnStyle} activeOpacity={0.7} onPress={() => handleQuizAnswer(opt)} disabled={quizState !== 'playing'}>
-                  <Text style={textStyle}>{opt}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      ) : (
-        <View style={styles.contentContainer}>
-          <View style={styles.wordSection}>
-            <Text style={styles.wordText}>{currentWord?.word}</Text>
-            <Text style={styles.typeText}>{currentWord?.type}</Text>
-          </View>
-          <View style={styles.definitionSection}>
-            <View style={styles.definitionCard}>
-              <Text style={styles.definitionLabel}>Definition</Text>
-              <Text style={styles.definitionText}>{currentWord?.definition}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.exampleLabel}>Example</Text>
-              <Text style={styles.exampleText}>{currentWord?.example}</Text>
+
+          <View style={styles.cardContentDivider} />
+
+          {quizOptions ? (
+            <View style={styles.cardOptionsContainer}>
+              {quizOptions.map((opt, idx) => {
+                let btnStyle = [styles.cardOptionBtn];
+                let textStyle = [styles.cardOptionText];
+                if (quizState !== 'playing') {
+                  if (opt === currentWord.definition) { btnStyle.push(styles.cardOptionCorrect); textStyle.push(styles.cardOptionTextCorrect); }
+                  else if (opt === selectedOption) { btnStyle.push(styles.cardOptionWrong); textStyle.push(styles.cardOptionTextWrong); }
+                }
+                return (
+                  <TouchableOpacity key={idx} style={btnStyle} activeOpacity={0.7} onPress={() => handleQuizAnswer(opt)} disabled={quizState !== 'playing'}>
+                    <Text style={textStyle}>{opt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <Text style={styles.tapToNextText}>Tap anywhere to continue</Text>
-          </View>
+          ) : (
+            <View style={styles.cardDefinitionSection}>
+              <View style={styles.cardDefinitionRow}>
+                <Text style={styles.cardLabel}>Definition</Text>
+                <Text style={styles.cardDefinitionText}>{currentWord?.definition}</Text>
+              </View>
+              <View style={[styles.cardDefinitionRow, { marginTop: 20 }]}>
+                <Text style={styles.cardLabel}>Example</Text>
+                <Text style={styles.cardExampleText}>{currentWord?.example}</Text>
+              </View>
+              <Text style={styles.cardHintText}>Tap anywhere to continue</Text>
+            </View>
+          )}
         </View>
-      )}
+      </View>
 
       <TouchableOpacity style={styles.versionBtn} onPress={handleForceUpdate}>
         <Text style={styles.versionText}>v{APP_VERSION}</Text>
@@ -466,28 +464,34 @@ const styles = StyleSheet.create({
   startBtn: { backgroundColor: '#1d1d1f', paddingVertical: 18, paddingHorizontal: 45, borderRadius: 22, shadowColor: '#000', shadowOffset: {width:0, height:6}, shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 },
   startBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 
-  // Session Styles
-  progressContainer: { position: 'absolute', top: 50, right: 25, zIndex: 10 },
-  progressText: { color: '#86868b', fontSize: 14, fontWeight: 'bold' },
-  contentContainer: { flex: 1, paddingHorizontal: 25, paddingTop: 80, paddingBottom: 40, justifyContent: 'space-around' },
-  wordSection: { alignItems: 'center', justifyContent: 'center' },
-  wordText: { fontSize: 48, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
-  typeText: { fontSize: 18, color: '#0071e3', fontStyle: 'italic', textAlign: 'center', marginTop: 8 },
-  definitionSection: { flex: 1, justifyContent: 'center' },
-  definitionCard: { backgroundColor: '#fff', borderRadius: 24, padding: 30, shadowColor: '#000', shadowOffset: {width:0, height:8}, shadowOpacity: 0.05, shadowRadius: 15, elevation: 5 },
-  definitionLabel: { fontSize: 12, color: '#86868b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
-  definitionText: { fontSize: 22, color: '#1d1d1f', lineHeight: 30, fontWeight: '600' },
-  divider: { height: 1, backgroundColor: '#f0f0f2', marginVertical: 25 },
-  exampleLabel: { fontSize: 12, color: '#86868b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
-  exampleText: { fontSize: 18, color: '#424245', fontStyle: 'italic', lineHeight: 26 },
-  tapToNextText: { textAlign: 'center', color: '#bfbfbf', fontSize: 13, marginTop: 25, fontStyle: 'italic' },
-  optionBtn: { backgroundColor: '#fff', padding: 20, borderRadius: 20, marginBottom: 12, borderWidth: 2, borderColor: 'transparent', shadowColor: '#000', shadowOffset: {width:0, height:4}, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  optionText: { fontSize: 16, color: '#1d1d1f', lineHeight: 22 },
-  optionCorrect: { backgroundColor: '#e8f5e9', borderColor: '#4CAF50' },
-  optionTextCorrect: { color: '#2e7d32', fontWeight: '700' },
-  optionWrong: { backgroundColor: '#ffebee', borderColor: '#ff5252' },
-  optionTextWrong: { color: '#c62828' },
+  // Study Screen Styles
+  sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, marginTop: 60 },
+  quitBtn: { paddingVertical: 8, paddingHorizontal: 15, borderRadius: 12, backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },
+  quitBtnText: { color: '#ff3b30', fontSize: 14, fontWeight: 'bold' },
+  progressBadge: { paddingVertical: 8, paddingHorizontal: 15, borderRadius: 12, backgroundColor: '#1d1d1f' },
+  progressText: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+
+  studyCardContainer: { flex: 1, padding: 20, justifyContent: 'center' },
+  mainCard: { backgroundColor: '#fff', borderRadius: 32, padding: 25, shadowColor: '#000', shadowOffset: {width:0, height:12}, shadowOpacity: 0.08, shadowRadius: 20, elevation: 5, minHeight: '75%' },
+  cardWordSection: { alignItems: 'center', paddingVertical: 10 },
+  cardWordText: { fontSize: 44, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' },
+  cardTypeText: { fontSize: 18, color: '#0071e3', fontStyle: 'italic', marginTop: 5 },
+  cardContentDivider: { height: 1, backgroundColor: '#f0f0f2', marginVertical: 20, width: '100%' },
   
+  cardDefinitionSection: { flex: 1, justifyContent: 'center' },
+  cardLabel: { fontSize: 11, color: '#86868b', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 },
+  cardDefinitionText: { fontSize: 20, color: '#1d1d1f', lineHeight: 28, fontWeight: '600' },
+  cardExampleText: { fontSize: 17, color: '#424245', fontStyle: 'italic', lineHeight: 24 },
+  cardHintText: { textAlign: 'center', color: '#d1d1d6', fontSize: 12, marginTop: 30, fontStyle: 'italic' },
+  
+  cardOptionsContainer: { flex: 1, justifyContent: 'center' },
+  cardOptionBtn: { backgroundColor: '#f5f5f7', padding: 18, borderRadius: 20, marginBottom: 12, borderWidth: 2, borderColor: 'transparent' },
+  cardOptionText: { fontSize: 15, color: '#1d1d1f', lineHeight: 21 },
+  cardOptionCorrect: { backgroundColor: '#e8f5e9', borderColor: '#34c759' },
+  cardOptionTextCorrect: { color: '#248a3d', fontWeight: 'bold' },
+  cardOptionWrong: { backgroundColor: '#fff5f5', borderColor: '#ff3b30' },
+  cardOptionTextWrong: { color: '#c30000' },
+
   versionBtn: { position: 'absolute', bottom: 15, right: 20, padding: 5 },
   versionText: { color: '#d1d1d6', fontSize: 10 }
 });
